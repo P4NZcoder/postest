@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ปังปอนด์ POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f2f2f7;
+            -webkit-tap-highlight-color: transparent;
+            padding-bottom: 100px; /* เผื่อพื้นที่ปุ่มด้านล่าง */
+        }
+        .ios-card { background-color: #ffffff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .ios-input { appearance: none; outline: none; font-size: 16px; /* ป้องกัน iOS ซูม */ }
+        .ios-input:focus { outline: none; }
+        .ios-btn:active { transform: scale(0.97); transition: transform 0.1s; }
+        
+        /* Toast Animation */
+        .toast-enter { transform: translateY(0); opacity: 1; }
+        .toast-exit { transform: translateY(-100%); opacity: 0; }
+    </style>
+</head>
+<body class="text-gray-900">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-4 left-4 right-4 z-50 flex items-center p-4 rounded-xl shadow-lg transform -translate-y-full opacity-0 pointer-events-none transition-all duration-300 bg-white border-l-4">
+        <i id="toast-icon" class="ph text-2xl mr-3 flex-shrink-0"></i>
+        <span id="toast-message" class="font-medium text-[15px] text-gray-900"></span>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-gray-200 px-4 py-3 flex justify-between items-center pt-safe-top shadow-sm">
+        <div class="flex items-center">
+            <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center mr-2 text-orange-500">
+                <i class="ph-fill ph-storefront"></i>
+            </div>
+            <h1 class="text-[17px] font-bold text-gray-800 tracking-tight">Mini POS</h1>
+        </div>
+        <!-- ปุ่มตั้งค่า IP -->
+        <button onclick="toggleSettings()" class="w-8 h-8 flex items-center justify-center text-gray-500 bg-gray-100 rounded-full ios-btn">
+            <i class="ph ph-gear text-lg"></i>
+        </button>
+    </header>
+
+    <!-- Settings Section (ซ่อนเป็นค่าเริ่มต้น) -->
+    <div id="settingsSection" class="hidden px-4 mt-4">
+        <div class="ios-card p-3 flex items-center border border-gray-200">
+            <i class="ph ph-wifi-high text-blue-500 text-xl mr-3"></i>
+            <div class="flex-1">
+                <p class="text-[12px] text-gray-500 mb-0.5">IP Address คอมพิวเตอร์ (Server)</p>
+                <input type="text" id="ipAddress" value="192.168.1.50" class="w-full text-[15px] ios-input bg-transparent font-medium" placeholder="192.168.1.50">
+            </div>
+        </div>
+    </div>
+
+    <main class="px-4 mt-4 max-w-md mx-auto">
+        
+        <!-- ข้อมูลโต๊ะ -->
+        <div class="ios-card p-4 mb-4 flex items-center">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 mr-3">
+                <i class="ph ph-armchair text-xl"></i>
+            </div>
+            <div class="flex-1">
+                <label class="text-[13px] text-gray-500 font-medium">ระบุเลขโต๊ะ</label>
+                <input type="text" id="tableNo" placeholder="เช่น โต๊ะ 5 หรือ A1" class="w-full text-[17px] font-bold ios-input mt-1 pb-1 border-b border-gray-200" value="โต๊ะ 1">
+            </div>
+        </div>
+
+        <!-- เพิ่มรายการเมนู -->
+        <div class="mb-2 text-[13px] text-gray-500 uppercase tracking-wide font-semibold ml-1">เพิ่มเมนูลงบิล</div>
+        <div class="ios-card p-4 mb-4">
+            <div class="flex gap-2 mb-3">
+                <div class="flex-1">
+                    <input type="text" id="itemName" placeholder="ชื่อเมนู" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] ios-input">
+                </div>
+                <div class="w-24">
+                    <input type="number" id="itemPrice" placeholder="ราคา" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2.5 text-[15px] ios-input" inputmode="numeric">
+                </div>
+            </div>
+            <button onclick="addItem()" class="w-full bg-indigo-50 text-indigo-600 font-semibold rounded-lg py-2.5 flex items-center justify-center ios-btn active:bg-indigo-100">
+                <i class="ph ph-plus-circle text-lg mr-2"></i> เพิ่มรายการ
+            </button>
+
+            <!-- เมนูด่วนสำหรับทดสอบ -->
+            <div class="mt-3 pt-3 border-t border-gray-100 flex gap-2 overflow-x-auto pb-1">
+                <button onclick="addQuickItem('ชุดหมูกระทะใหญ่', 250)" class="whitespace-nowrap px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-[13px] ios-btn">+ หมูใหญ่ 250฿</button>
+                <button onclick="addQuickItem('น้ำแข็ง', 20)" class="whitespace-nowrap px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-[13px] ios-btn">+ น้ำแข็ง 20฿</button>
+                <button onclick="addQuickItem('โค้กลิตร', 40)" class="whitespace-nowrap px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-[13px] ios-btn">+ โค้กลิตร 40฿</button>
+            </div>
+        </div>
+
+        <!-- รายการในบิล (ตะกร้า) -->
+        <div class="mb-2 flex justify-between items-end ml-1">
+            <div class="text-[13px] text-gray-500 uppercase tracking-wide font-semibold">รายการที่สั่ง</div>
+            <button onclick="clearCart()" class="text-[13px] text-red-500 font-medium">ล้างทั้งหมด</button>
+        </div>
+        <div class="ios-card overflow-hidden mb-6 min-h-[100px]">
+            <ul id="cartList" class="divide-y divide-gray-100">
+                <!-- รายการจะถูกสร้างที่นี่ด้วย JavaScript -->
+                <li class="p-6 text-center text-gray-400 text-[14px]" id="emptyState">ยังไม่มีรายการอาหาร</li>
+            </ul>
+        </div>
+
+    </main>
+
+    <!-- แถบด้านล่างสำหรับกดพิมพ์ (Sticky Footer) -->
+    <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 pb-safe-bottom shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-40">
+        <div class="max-w-md mx-auto flex gap-3 items-center">
+            <div class="flex-col flex">
+                <span class="text-[12px] text-gray-500 font-medium leading-none mb-1">ยอดรวมทั้งหมด</span>
+                <span class="text-2xl font-bold text-gray-900 leading-none">฿<span id="totalAmountDisplay">0</span></span>
+            </div>
+            <button id="checkoutBtn" onclick="checkoutAndPrint()" class="flex-1 bg-blue-500 text-white font-bold text-[17px] rounded-xl py-3.5 flex items-center justify-center ios-btn shadow-md disabled:opacity-50 disabled:bg-gray-300" disabled>
+                <i class="ph ph-printer text-xl mr-2"></i> สั่งพิมพ์บิล
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // State สำหรับเก็บข้อมูลตะกร้า
+        let cart = [];
+        let totalAmount = 0;
+
+        // จัดการ IP Address
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedIp = localStorage.getItem('pos_server_ip');
+            if (savedIp) document.getElementById('ipAddress').value = savedIp;
+            renderCart();
+        });
+        document.getElementById('ipAddress').addEventListener('input', (e) => {
+            localStorage.setItem('pos_server_ip', e.target.value);
+        });
+
+        function toggleSettings() {
+            const el = document.getElementById('settingsSection');
+            el.classList.toggle('hidden');
+        }
+
+        // ฟังก์ชันแจ้งเตือน
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toast-icon');
+            const msgEl = document.getElementById('toast-message');
+
+            toast.classList.remove('border-green-500', 'border-red-500', 'border-blue-500', 'toast-enter', 'toast-exit');
+            icon.className = 'ph text-2xl mr-3 flex-shrink-0';
+
+            if (type === 'success') {
+                toast.classList.add('border-green-500'); icon.classList.add('ph-check-circle', 'text-green-500');
+            } else if (type === 'error') {
+                toast.classList.add('border-red-500'); icon.classList.add('ph-warning-circle', 'text-red-500');
+            } else {
+                toast.classList.add('border-blue-500'); icon.classList.add('ph-spinner', 'animate-spin', 'text-blue-500');
+            }
+
+            msgEl.textContent = message;
+            toast.classList.remove('-translate-y-full', 'opacity-0');
+            toast.classList.add('toast-enter');
+
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    toast.classList.remove('toast-enter');
+                    toast.classList.add('-translate-y-full', 'opacity-0');
+                }, 3000);
+            }
+        }
+
+        // --- ระบบตะกร้าสินค้า ---
+
+        function addQuickItem(name, price) {
+            document.getElementById('itemName').value = name;
+            document.getElementById('itemPrice').value = price;
+            addItem();
+        }
+
+        function addItem() {
+            const nameInput = document.getElementById('itemName');
+            const priceInput = document.getElementById('itemPrice');
+            const name = nameInput.value.trim();
+            const price = parseFloat(priceInput.value);
+
+            if (!name || isNaN(price) || price < 0) {
+                showToast('กรุณากรอกชื่อและราคาให้ถูกต้อง', 'error');
+                return;
+            }
+
+            // เช็คว่ามีเมนูนี้ในบิลหรือยัง ถ้ามีให้เพิ่มจำนวน
+            const existingItem = cart.find(item => item.name === name && item.price === price);
+            if (existingItem) {
+                existingItem.qty += 1;
+            } else {
+                cart.push({ name: name, price: price, qty: 1 });
+            }
+
+            nameInput.value = '';
+            priceInput.value = '';
+            nameInput.focus();
+            renderCart();
+        }
+
+        function updateQty(index, delta) {
+            cart[index].qty += delta;
+            if (cart[index].qty <= 0) {
+                cart.splice(index, 1); // ลบออกถ้าจำนวนเป็น 0
+            }
+            renderCart();
+        }
+
+        function clearCart() {
+            if(cart.length === 0) return;
+            if(confirm('ต้องการล้างบิลทั้งหมดหรือไม่?')){
+                cart = [];
+                renderCart();
+            }
+        }
+
+        function renderCart() {
+            const listEl = document.getElementById('cartList');
+            const emptyEl = document.getElementById('emptyState');
+            const checkoutBtn = document.getElementById('checkoutBtn');
+            const totalDisplay = document.getElementById('totalAmountDisplay');
+
+            listEl.innerHTML = '';
+            totalAmount = 0;
+
+            if (cart.length === 0) {
+                listEl.innerHTML = '<li class="p-6 text-center text-gray-400 text-[14px]">ยังไม่มีรายการอาหาร</li>';
+                totalDisplay.textContent = '0';
+                checkoutBtn.disabled = true;
+                return;
+            }
+
+            checkoutBtn.disabled = false;
+
+            cart.forEach((item, index) => {
+                const itemTotal = item.price * item.qty;
+                totalAmount += itemTotal;
+
+                const li = document.createElement('li');
+                li.className = 'p-3 px-4 flex justify-between items-center';
+                li.innerHTML = `
+                    <div class="flex-1 pr-2">
+                        <h4 class="text-[15px] font-semibold text-gray-800 leading-tight">${item.name}</h4>
+                        <p class="text-[13px] text-gray-500 mt-0.5">${item.price} ฿ / หน่วย</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center bg-gray-100 rounded-lg">
+                            <button onclick="updateQty(${index}, -1)" class="w-8 h-8 flex items-center justify-center text-gray-600 ios-btn active:bg-gray-200 rounded-l-lg"><i class="ph ph-minus"></i></button>
+                            <span class="w-6 text-center text-[14px] font-bold">${item.qty}</span>
+                            <button onclick="updateQty(${index}, 1)" class="w-8 h-8 flex items-center justify-center text-gray-600 ios-btn active:bg-gray-200 rounded-r-lg"><i class="ph ph-plus"></i></button>
+                        </div>
+                        <div class="w-16 text-right font-bold text-[15px] text-gray-900">${itemTotal}฿</div>
+                    </div>
+                `;
+                listEl.appendChild(li);
+            });
+
+            totalDisplay.textContent = totalAmount.toLocaleString();
+        }
+
+        // --- ระบบส่งคำสั่งพิมพ์ ---
+
+        async function checkoutAndPrint() {
+            const ipAddress = document.getElementById('ipAddress').value.trim();
+            const tableNumber = document.getElementById('tableNo').value.trim() || 'ไม่ระบุโต๊ะ';
+            const btn = document.getElementById('checkoutBtn');
+            
+            if (!ipAddress) return showToast('กรุณาระบุ IP คอมพิวเตอร์ในการตั้งค่า', 'error');
+            if (cart.length === 0) return;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin text-xl mr-2"></i> กำลังพิมพ์...';
+            showToast('กำลังส่งออเดอร์ไปที่เครื่องพิมพ์...', 'loading');
+
+            // สร้างเลขคิวจำลอง
+            const orderNumber = 'Q-' + Math.floor(100 + Math.random() * 900);
+
+            // โครงสร้างข้อมูลที่จะส่งไป Node.js
+            const payload = {
+                orderNumber: orderNumber,
+                tableNumber: tableNumber,
+                items: cart,
+                totalAmount: totalAmount
+            };
+
+            try {
+                const url = `http://${ipAddress}:3000/print-receipt`;
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    showToast('พิมพ์ใบเสร็จเรียบร้อย!', 'success');
+                    if (navigator.vibrate) navigator.vibrate([50, 50, 50]); // สั่น 2 ครั้ง
+                    
+                    // ล้างตะกร้าหลังพิมพ์เสร็จ
+                    cart = [];
+                    document.getElementById('tableNo').value = '';
+                    renderCart();
+                } else {
+                    showToast('เซิร์ฟเวอร์ตอบกลับผิดพลาด', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('เชื่อมต่อคอมพิวเตอร์ไม่ได้ เช็ค Wi-Fi หรือ IP', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-printer text-xl mr-2"></i> สั่งพิมพ์บิล';
+                
+                const toast = document.getElementById('toast');
+                if(toast.classList.contains('border-blue-500')){
+                    toast.classList.remove('toast-enter');
+                    toast.classList.add('-translate-y-full', 'opacity-0');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
