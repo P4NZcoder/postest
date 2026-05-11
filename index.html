@@ -62,7 +62,7 @@
             <i class="ph ph-wifi-high text-blue-500 text-xl mr-3 mt-1"></i>
             <div class="flex-1 overflow-hidden">
                 <p class="text-[12px] text-gray-500 mb-0.5 font-medium">URL หรือ IP เครื่องปริ้น (Server)</p>
-                <input type="text" id="ipAddress" value="192.168.1.50" class="w-full text-[15px] ios-input bg-transparent font-semibold" placeholder="เช่น 192.168.1.50 หรือ https://...ngrok.app">
+                <input type="text" id="ipAddress" value="" class="w-full text-[15px] ios-input bg-transparent font-semibold" placeholder="เช่น 192.168.1.50 หรือ https://...ngrok.app">
             </div>
         </div>
     </div>
@@ -300,15 +300,15 @@
             if (!rawInput) return showToast('กรุณาระบุข้อมูล Server ในการตั้งค่า', 'error');
             if (cart.length === 0) return;
 
-            // จัดการ URL (รองรับทั้งการกรอกแค่ IP หรือ กรอก URL เต็มๆ เช่น ngrok)
+            // จัดการ URL ให้ถูกต้องตรงกับเส้นทางของ Server ที่กำหนดใน Node.js (/print)
             let serverUrl = rawInput;
             if (!serverUrl.startsWith('http')) {
-                // ถ้ากรอกมาแค่ตัวเลข IP ให้เติม http:// นำหน้า และพอร์ต 3000
-                serverUrl = `http://${serverUrl}:3000/print-receipt`;
+                // ถ้ากรอกมาแค่ตัวเลข IP
+                serverUrl = `http://${serverUrl}:3000/print`;
             } else {
-                // ถ้ากรอกมาเป็นลิงก์ (เช่น ngrok) ให้เติม endpoint เข้าไปถ้ายังไม่มี
-                if(!serverUrl.includes('/print-receipt')) {
-                    serverUrl = serverUrl.replace(/\/$/, '') + '/print-receipt';
+                // ถ้ากรอกมาเป็นลิงก์ ngrok และยังไม่มี endpoint
+                if(!serverUrl.includes('/print')) {
+                    serverUrl = serverUrl.replace(/\/$/, '') + '/print';
                 }
             }
 
@@ -341,7 +341,10 @@
 
                 const response = await fetch(serverUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'ngrok-skip-browser-warning': '69420' // ข้ามหน้าต่างแจ้งเตือนของ ngrok เมื่อใช้งานบนเบราว์เซอร์
+                    },
                     body: JSON.stringify(payload),
                     signal: controller.signal
                 });
